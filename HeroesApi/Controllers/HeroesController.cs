@@ -11,9 +11,35 @@ namespace HeroesApi.Controllers;
 [Route("api/[controller]")]
 public class HeroesController : ControllerBase {
     // Метод GetAll() — получение всех героев
+    // Метод GetAll() — получение всех героев с возможной фильтрацией по вселенной
     [HttpGet]
-    public ActionResult<List<Hero>> GetAll() {
-        return Ok(HeroesStore.Heroes);
+    public ActionResult<List<Hero>> GetAll([FromQuery] string? universe = null) {
+        var heroes = HeroesStore.Heroes;
+
+        if (!string.IsNullOrEmpty(universe)) {
+            if (Enum.TryParse<Universe>(universe, ignoreCase: true, out var universeEnum)) {
+                heroes = heroes.Where(h => h.Universe == universeEnum).ToList();
+            }
+            else {
+                heroes = new List<Hero>();
+            }
+        }
+        return Ok(heroes);
+    }
+
+    // GET /api/heroes/search?name=...
+    [HttpGet("search")]
+    public ActionResult<List<Hero>> Search([FromQuery] string name) {
+        if (string.IsNullOrWhiteSpace(name)) {
+            // Можно вернуть пустой список или BadRequest — по заданию подходит пустой список
+            return Ok(new List<Hero>());
+        }
+
+        var result = HeroesStore.Heroes
+            .Where(h => h.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return Ok(result);
     }
 
     // Метод GetById() — получение героя по ID
